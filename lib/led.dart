@@ -130,11 +130,6 @@ class _ChatPage extends State<ChatPage> {
       series,
       animate: false,
       behaviors: [
-        new charts.ChartTitle('',
-            subTitle: 'LIDS - VENTILATOR CUM RESPIRATOR',
-            behaviorPosition: charts.BehaviorPosition.top,
-            titleOutsideJustification: charts.OutsideJustification.start,
-            innerPadding: 18),
         new charts.ChartTitle('Time(seconds)',
             behaviorPosition: charts.BehaviorPosition.bottom,
             titleOutsideJustification:
@@ -146,12 +141,8 @@ class _ChatPage extends State<ChatPage> {
       ],
     );
 
-    var chartWidget = new Padding(
-      padding: new EdgeInsets.all(32.0),
-      child: new SizedBox(
-        height: MediaQuery.of(context).size.height,
-        child: chart,
-      ),
+    var chartWidget = new SizedBox(
+      child: chart,
     );
 
     return Scaffold(
@@ -164,8 +155,23 @@ class _ChatPage extends State<ChatPage> {
       body: SafeArea(
           child: RepaintBoundary(
               key: _printKey,
-              child: new Center(
-                  child: isConnected ? chartWidget : Text('connecting...')))),
+              child: isConnected
+                  ? new Column(children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20.0),
+                        child: Text(
+                          'LIDS - RV',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                              fontSize: 16),
+                        ),
+                      ),
+                      Flexible(child: chartWidget)
+                    ])
+                  : new Center(
+                      child: Text('connecting...'),
+                    ))),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.print),
         onPressed: _printScreen,
