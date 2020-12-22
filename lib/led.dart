@@ -167,7 +167,7 @@ class _ChatPage extends State<ChatPage> {
                               fontSize: 16),
                         ),
                       ),
-                      Flexible(child: chartWidget)
+                      // Flexible(child: chartWidget)
                     ])
                   : new Center(
                       child: Text('connecting...'),
@@ -179,20 +179,102 @@ class _ChatPage extends State<ChatPage> {
     );
   }
 
-  void _onDataReceived(Uint8List data) {
-    _binary = data;
-    // print(data);
-    DateTime now = new DateTime.now();
-    var converted = int.parse(ascii.decode([_binary[1]])) * 100 +
-        int.parse(ascii.decode([_binary[2]])) * 10 +
-        int.parse(ascii.decode([_binary[3]])) * 1;
+  void _onDataReceived(data) {
+    _binary += data;
+    if (_binary.length >= 32) {
+      // START
+      print('Iteration: ${ascii.decode([
+        _binary[0],
+        _binary[1],
+        _binary[2],
+        _binary[3],
+        _binary[4]
+      ])}');
 
-    o2_data[now.toString()] = O2Series(converted, seconds);
+      // TEMPERATURE
+      var temp1 =
+          _binary[5].toString().length == 1 ? '0${_binary[5]}' : _binary[5];
+      var temp2 =
+          _binary[6].toString().length == 1 ? '0${_binary[6]}' : _binary[6];
+      var temp3 =
+          _binary[7].toString().length == 1 ? '0${_binary[7]}' : _binary[7];
+      var temp4 =
+          _binary[8].toString().length == 1 ? '0${_binary[8]}' : _binary[8];
+      var temperature = int.parse('$temp1$temp2$temp3$temp4', radix: 16) / 100;
+      print('temperature: $temperature C');
 
-    setState(() {
-      _binary = _binary;
-      o2_data = o2_data;
-    });
+      // PRESSUER
+      var pres1 =
+          _binary[9].toString().length == 1 ? '0${_binary[9]}' : _binary[9];
+      var pres2 =
+          _binary[10].toString().length == 1 ? '0${_binary[10]}' : _binary[10];
+      var pres3 =
+          _binary[11].toString().length == 1 ? '0${_binary[11]}' : _binary[11];
+      var pres4 =
+          _binary[12].toString().length == 1 ? '0${_binary[12]}' : _binary[12];
+      var pressuer = int.parse('$pres1$pres2$pres3$pres4', radix: 16) / 100;
+      print('pressuer: $pressuer hpa');
+
+      // VOC value
+      var voc1 = (_binary[13] - 13) * (1000 / 229);
+      print('VOC Value: $voc1 ppb');
+
+      // Co2 value
+      var co = (_binary[14] - 13) * (1600 / 229) + 400;
+      print('Co2 Value: $co ppm');
+
+      // Coil Current value
+      var ccv1 =
+          _binary[20].toString().length == 1 ? '0${_binary[20]}' : _binary[20];
+      var ccv2 =
+          _binary[21].toString().length == 1 ? '0${_binary[21]}' : _binary[21];
+      var ccv3 =
+          _binary[22].toString().length == 1 ? '0${_binary[22]}' : _binary[22];
+      var ccv4 =
+          _binary[23].toString().length == 1 ? '0${_binary[23]}' : _binary[23];
+      var ccv = int.parse('$ccv1$ccv2$ccv3$ccv4', radix: 16);
+      print('Coil Current Value: $ccv');
+
+      // O2 sense value
+      var o1 =
+          _binary[24].toString().length == 1 ? '0${_binary[24]}' : _binary[24];
+      var o2 =
+          _binary[25].toString().length == 1 ? '0${_binary[25]}' : _binary[25];
+      var o3 =
+          _binary[26].toString().length == 1 ? '0${_binary[26]}' : _binary[26];
+      var o4 =
+          _binary[27].toString().length == 1 ? '0${_binary[27]}' : _binary[27];
+      var o = int.parse('$o1$o2$o3$o4', radix: 16);
+      print('O2 Sense Value: $o');
+
+      // Battery voltage
+      var bv1 =
+          _binary[28].toString().length == 1 ? '0${_binary[28]}' : _binary[28];
+      var bv2 =
+          _binary[29].toString().length == 1 ? '0${_binary[29]}' : _binary[29];
+      var bv3 =
+          _binary[30].toString().length == 1 ? '0${_binary[30]}' : _binary[30];
+      var bv4 =
+          _binary[31].toString().length == 1 ? '0${_binary[31]}' : _binary[31];
+      var bv = ((3.125 / 1024) * int.parse('$bv1$bv2$bv3$bv4', radix: 16)) * 2;
+      print('Battery voltage: $bv V');
+
+      // DateTime now = new DateTime.now();
+      // var converted = int.parse(ascii.decode([_binary[1]])) * 100 +
+      //     int.parse(ascii.decode([_binary[2]])) * 10 +
+      //     int.parse(ascii.decode([_binary[3]])) * 1;
+
+      // o2_data[now.toString()] = O2Series(converted, seconds);
+
+      // setState(() {
+      //   _binary = _binary;
+      //   o2_data = o2_data;
+      // });
+
+      // REMOVE THE ENITER ITERATION
+      _binary.removeRange(0, 32);
+      print('-------------------------');
+    }
   }
 }
 
