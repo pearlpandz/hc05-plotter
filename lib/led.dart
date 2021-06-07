@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -41,8 +40,13 @@ class _ChatPage extends State<ChatPage> {
 
   int seconds = 0;
 
-  // ignore: non_constant_identifier_names
-  Map<String, O2Series> o2_data = {};
+  Map<String, O2Series> o2data = {};
+  Map<String, O2Series> co2data = {};
+  List readings = [];
+
+  int index = 0;
+
+  final _controller = ScrollController();
 
   final GlobalKey<State<StatefulWidget>> _printKey = GlobalKey();
 
@@ -119,15 +123,16 @@ class _ChatPage extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    var series = [
+    // o2data
+    var o2Series = [
       new charts.Series<O2Series, int>(
           domainFn: (O2Series clickData, _) => clickData.num,
           measureFn: (O2Series clickData, _) => clickData.value,
-          id: 'Clicks',
-          data: o2_data.values.toList()),
+          id: 'o2_Clicks',
+          data: o2data.values.toList()),
     ];
-    var chart = new charts.LineChart(
-      series,
+    var o2Chart = new charts.LineChart(
+      o2Series,
       animate: false,
       behaviors: [
         new charts.ChartTitle('Time(seconds)',
@@ -140,38 +145,162 @@ class _ChatPage extends State<ChatPage> {
                 charts.OutsideJustification.middleDrawArea),
       ],
     );
-
-    var chartWidget = new SizedBox(
-      child: chart,
+    var o2ChartWidget = new SizedBox(
+      child: o2Chart,
     );
+
+    // co2data
+    var co2Series = [
+      new charts.Series<O2Series, int>(
+          domainFn: (O2Series clickData, _) => clickData.num,
+          measureFn: (O2Series clickData, _) => clickData.value,
+          id: 'co2_Clicks',
+          data: co2data.values.toList()),
+    ];
+    var co2Chart = new charts.LineChart(
+      co2Series,
+      animate: false,
+      behaviors: [
+        new charts.ChartTitle('Time(seconds)',
+            behaviorPosition: charts.BehaviorPosition.bottom,
+            titleOutsideJustification:
+                charts.OutsideJustification.middleDrawArea),
+        new charts.ChartTitle('Co2(%)',
+            behaviorPosition: charts.BehaviorPosition.start,
+            titleOutsideJustification:
+                charts.OutsideJustification.middleDrawArea),
+      ],
+    );
+    var co2ChartWidget = new SizedBox(
+      child: co2Chart,
+    );
+
+    Timer(
+      Duration(seconds: 1),
+      () => _controller.jumpTo(_controller.position.maxScrollExtent),
+    );
+
 
     return Scaffold(
       appBar: AppBar(
           title: (isConnecting
               ? Text('Connecting to ' + widget.server.name + '...')
               : isConnected
-                  ? Text('Conected with ' + widget.server.name)
+                  ? Text('LIDS - RV')
                   : Text('Chat log with ' + widget.server.name))),
+      bottomNavigationBar: new BottomNavigationBar(
+        currentIndex: index,
+        onTap: (int index) {
+          setState(() {
+            this.index = index;
+          });
+        },
+        items: <BottomNavigationBarItem>[
+          new BottomNavigationBarItem(
+            icon: new Icon(null),
+            label: "Graph",
+          ),
+          new BottomNavigationBarItem(
+            icon: new Icon(null),
+            label: "Data",
+          ),
+        ],
+      ),
       body: SafeArea(
-          child: RepaintBoundary(
-              key: _printKey,
-              child: isConnected
-                  ? new Column(children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20.0),
-                        child: Text(
-                          'LIDS - RV',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                              fontSize: 16),
+        child: RepaintBoundary(
+            key: _printKey,
+            child: isConnected
+                ? new Stack(
+                    children: <Widget>[
+                      new Offstage(
+                          offstage: index != 0,
+                          child: new Column(children: [
+                            Flexible(child: o2ChartWidget),
+                            Flexible(child: co2ChartWidget)
+                          ])),
+                      new Offstage(
+                        offstage: index != 1,
+                        child: new TickerMode(
+                          enabled: index == 1,
+                          child: new Column(children: [
+                            new Expanded(
+                                child: Container(
+                              color: Colors.black,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: ListView.builder(
+                                  controller: _controller,
+                                  physics: BouncingScrollPhysics(),
+                                  padding: EdgeInsets.only(bottom: 10),
+                                  shrinkWrap: true,
+                                  scrollDirection: Axis.vertical,
+                                  itemCount: readings.length,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(20.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'temperature: ${readings[index]['temperature']} C',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'pressuer: ${readings[index]['pressuer']} hpa',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'VOC Value: ${readings[index]['voc']} ppb',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'Co2 Value: ${readings[index]['co']} ppm',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'Coil Current Value: ${readings[index]['ccv']}',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'O2 Sense Value: ${readings[index]['o2']}',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'Battery voltage: ${readings[index]['bv']} V',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          Text(
+                                            'Time: ${readings[index]['datetime']}',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                          SizedBox(height: 20)
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ))
+                          ]),
                         ),
                       ),
-                      // Flexible(child: chartWidget)
-                    ])
-                  : new Center(
-                      child: Text('connecting...'),
-                    ))),
+                    ],
+                  )
+                : new Center(
+                    child: Text('connecting...'),
+                  )),
+      ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.print),
         onPressed: _printScreen,
@@ -259,17 +388,28 @@ class _ChatPage extends State<ChatPage> {
       var bv = ((3.125 / 1024) * int.parse('$bv1$bv2$bv3$bv4', radix: 16)) * 2;
       print('Battery voltage: $bv V');
 
-      // DateTime now = new DateTime.now();
-      // var converted = int.parse(ascii.decode([_binary[1]])) * 100 +
-      //     int.parse(ascii.decode([_binary[2]])) * 10 +
-      //     int.parse(ascii.decode([_binary[3]])) * 1;
+      DateTime now = new DateTime.now();
 
-      // o2_data[now.toString()] = O2Series(converted, seconds);
+      o2data[now.toString()] = O2Series(o.toInt(), seconds); // oxygen
 
-      // setState(() {
-      //   _binary = _binary;
-      //   o2_data = o2_data;
-      // });
+      co2data[now.toString()] = O2Series(co.toInt(), seconds); // Co2
+
+      readings.add({
+        'temperature': temperature,
+        'pressuer': pressuer,
+        'voc': voc1,
+        'co': co,
+        'ccv': ccv,
+        'o2': o,
+        'bv': bv,
+        'datetime': now
+      });
+
+      setState(() {
+        readings = readings;
+        o2data = o2data;
+        co2data = co2data;
+      });
 
       // REMOVE THE ENITER ITERATION
       _binary.removeRange(0, 32);
